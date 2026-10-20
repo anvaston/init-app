@@ -1,0 +1,158 @@
+/* style.css — вертикальний інтерфейс під телефон; на ноутбуці показується вузькою колонкою */
+:root {
+  --bg: #f2f4f3;
+  --card: #ffffff;
+  --text: #1b1f1d;
+  --muted: #6a736f;
+  --line: #dde3e0;
+  --accent: #1f7a4d;
+  --accent-text: #ffffff;
+  --danger: #b3261e;
+  --warn-bg: #fff4d6;
+  --ok-bg: #e3f4ea;
+  --err-bg: #fde7e5;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121514;
+    --card: #1c211f;
+    --text: #e6ebe8;
+    --muted: #97a19c;
+    --line: #2d3532;
+    --accent: #3bb27a;
+    --accent-text: #0b1510;
+    --danger: #ff6b60;
+    --warn-bg: #3a3218;
+    --ok-bg: #173226;
+    --err-bg: #3d1d1b;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+/* ---- шапка ---- */
+.top { padding-top: env(safe-area-inset-top); }
+.title { display: flex; align-items: center; justify-content: space-between; margin: 4px 0 12px; }
+h1 { font-size: 24px; margin: 0; letter-spacing: .3px; }
+h2 { font-size: 18px; margin: 0; }
+
+.pill { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--line); color: var(--muted); }
+.pill.on   { background: var(--ok-bg); color: var(--accent); }
+.pill.busy { background: var(--warn-bg); color: var(--text); }
+
+.hint, .note { color: var(--muted); font-size: 14px; margin: 8px 0 0; }
+.note { text-align: center; margin: 6px 0 12px; }
+.warn { background: var(--warn-bg); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+
+/* ---- кнопки ---- */
+.btn {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 48px;
+}
+.btn.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.btn.danger  { color: var(--danger); }
+.btn.wide    { width: 100%; }
+.btn:disabled { opacity: .45; cursor: default; }
+.link {
+  background: none; border: none; color: var(--accent);
+  font: inherit; font-size: 14px; padding: 8px 0; cursor: pointer;
+}
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.row .danger { grid-column: 1 / -1; }
+
+/* ---- картки ---- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 16px;
+}
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.tag { font-size: 12px; padding: 3px 8px; border-radius: 6px; }
+.tag.dirty { background: var(--warn-bg); }
+.tag.clean { background: var(--ok-bg); color: var(--accent); }
+
+.disabled { opacity: .5; pointer-events: none; }
+
+/* ---- режим ---- */
+.field-label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 18px; }
+.seg button {
+  border: 1px solid var(--line); background: var(--bg); color: var(--text);
+  border-radius: 10px; padding: 10px 0; font: inherit; font-weight: 600; cursor: pointer; min-height: 44px;
+}
+.seg button.active { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+
+/* ---- поля з повзунками ---- */
+.field { margin-bottom: 18px; }
+.field-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.field-row label { font-weight: 600; }
+.val { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.val input {
+  width: 84px; text-align: right; font: inherit; font-weight: 600;
+  padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text);
+}
+.field.changed .val input { border-color: var(--accent); }
+.val small { color: var(--muted); }
+input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: var(--accent); height: 28px; }
+.range-hint { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+/* ---- повідомлення ---- */
+.toast { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.toast.ok   { background: var(--ok-bg); }
+.toast.err  { background: var(--err-bg); }
+.toast.info { background: var(--warn-bg); }
+
+/* ---- журнал ---- */
+summary { font-weight: 600; cursor: pointer; padding: 4px 0; }
+.log-tools { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: var(--muted); margin-top: 8px; }
+.log {
+  height: 220px; overflow-y: auto; margin: 8px 0;
+  background: var(--bg); border-radius: 8px; padding: 8px;
+  font: 13px/1.35 ui-monospace, Consolas, monospace;
+}
+.log div { white-space: pre-wrap; word-break: break-all; }
+.log .tx  { color: var(--accent); }
+.log .svc { color: var(--muted); }
+.log .sys { color: var(--muted); font-style: italic; }
+.raw { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.raw input {
+  font: inherit; padding: 10px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--bg); color: var(--text); min-width: 0;
+}
+
+.foot { text-align: center; color: var(--muted); font-size: 12px; margin-top: 20px; }
+
+/* ---- лише вертикально ---- */
+.rotate { display: none; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .rotate {
+    display: flex; position: fixed; inset: 0; z-index: 10;
+    align-items: center; justify-content: center;
+    background: var(--bg); color: var(--text); font-size: 18px; text-align: center; padding: 24px;
+  }
+  .app { display: none; }
+}

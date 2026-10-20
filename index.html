@@ -20,6 +20,10 @@
         <h1>init_stm</h1>
         <span id="status" class="pill off">Не підключено</span>
       </div>
+      <div id="sysInfo" class="sys" hidden>
+        <button id="batChip" class="chip" title="Оновити"><span class="bat"><i id="batFill"></i></span><span class="chip-txt"><b id="batText">—</b><small id="batLvl">батарея</small></span></button>
+        <button id="tempChip" class="chip" title="Оновити"><span class="chip-txt"><b id="tempText">—</b><small>температура</small></span></button>
+      </div>
       <button id="btnConnect" class="btn primary wide">Підключити</button>
       <button id="btnConnectAll" class="link">Плату не видно? Показати всі пристрої</button>
       <p id="hint" class="hint">Увімкніть плату з <b>натиснутим</b> важелем — на підключення є 15 с.</p>
@@ -31,6 +35,26 @@
 
     <!-- ===== Повідомлення ===== -->
     <div id="toast" class="toast" hidden></div>
+
+    <!-- ===== Датчики наживо (лише коли підключено) ===== -->
+    <section class="card" id="live" hidden>
+      <div class="card-head">
+        <h2>Датчики наживо</h2>
+        <span class="tag clean">кожні 0.5 с</span>
+      </div>
+      <div class="meter" id="mAcc">
+        <div class="meter-top"><span class="meter-name">Удар<small class="off-note"> · у роботі вимкнено</small></span><span class="meter-val">—</span></div>
+        <div class="bar"><i class="fill"></i><b class="ths"></b></div>
+        <div class="meter-bot"><span class="meter-ths">поріг —</span><span class="trig">чекаю даних</span></div>
+      </div>
+      <div class="meter" id="mMag">
+        <div class="meter-top"><span class="meter-name">Магніт<small class="off-note"> · у роботі вимкнено</small></span><span class="meter-val">—</span></div>
+        <div class="bar"><i class="fill"></i><b class="ths"></b></div>
+        <div class="meter-bot"><span class="meter-ths">поріг —</span><span class="trig">чекаю даних</span></div>
+      </div>
+      <button id="btnApply" class="btn wide">Перевірити пороги без збереження</button>
+      <p class="note">Поріг посередині шкали. «Спрацювало б» — у робочому режимі тут загорівся б червоний.</p>
+    </section>
 
     <!-- ===== Налаштування ===== -->
     <section class="card" id="settings">
@@ -80,6 +104,15 @@
         <input type="range" min="0" max="1000">
       </div>
 
+      <div class="field" data-key="AUTO">
+        <div class="field-row">
+          <label>Самозбудження</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>хв</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+        <div class="range-hint"><span id="autoHuman">вимкнено</span><span>макс. 24 год</span></div>
+      </div>
+
       <button id="btnSave" class="btn primary wide">Зберегти і запустити</button>
       <p class="note">Після збереження плата переходить у роботу і відключається.</p>
       <div class="row">
@@ -94,7 +127,7 @@
       <details id="logBox">
         <summary>Журнал обміну</summary>
         <div class="log-tools">
-          <label><input type="checkbox" id="showService"> службові (AT+VER)</label>
+          <label><input type="checkbox" id="showService"> службові (AT+VER, датчики)</label>
           <button id="btnClear" class="link">очистити</button>
         </div>
         <div id="log" class="log"></div>
@@ -105,7 +138,7 @@
       </details>
     </section>
 
-    <footer class="foot">init_stm · пульт v0.2</footer>
+    <footer class="foot">init_stm · пульт v0.5</footer>
   </main>
 
   <script src="ble.js"></script>

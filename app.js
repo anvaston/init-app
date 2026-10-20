@@ -18,8 +18,9 @@ const PARAMS = {
   MAG: { min: 5,   max: 2000,  log: true  },
   RED: { min: 100, max: 10000, log: true  },
   TIM: { min: 0,   max: 300,   log: false },
+  AUTO: { min: 0,  max: 1440,  log0: true },   // хвилини, 0 = вимкнено
 };
-const KEYS = ['MODE', 'TAP', 'MAG', 'RED', 'TIM'];
+const KEYS = ['MODE', 'TAP', 'MAG', 'RED', 'TIM', 'AUTO'];
 const REPLY_TIMEOUT_MS = 2500;
 
 // ---------- стан ----------
@@ -46,17 +47,21 @@ const el = {
 // =====================================================================
 function posToValue(key, pos) {
   const p = PARAMS[key];
-  let v = p.log ? p.min * Math.pow(p.max / p.min, pos / 1000) : p.min + (p.max - p.min) * pos / 1000;
-  return niceRound(v, p);
+  let v = p.log0 ? Math.pow(p.max + 1, pos / 1000) - 1
+        : p.log  ? p.min * Math.pow(p.max / p.min, pos / 1000)
+        :          p.min + (p.max - p.min) * pos / 1000;
+  return niceRound(v, p, key);
 }
 function valueToPos(key, v) {
   const p = PARAMS[key];
   v = Math.min(p.max, Math.max(p.min, v));
+  if (p.log0) return Math.round(1000 * Math.log(v + 1) / Math.log(p.max + 1));
   return p.log ? Math.round(1000 * Math.log(v / p.min) / Math.log(p.max / p.min))
                : Math.round(1000 * (v - p.min) / (p.max - p.min));
 }
-function niceRound(v, p) {
-  const step = v >= 5000 ? 100 : v >= 1000 ? 50 : v >= 200 ? 10 : v >= 50 ? 5 : 1;
+function niceRound(v, p, key) {
+  const step = key === 'AUTO' ? (v >= 240 ? 15 : v >= 60 ? 5 : 1)
+             : v >= 5000 ? 100 : v >= 1000 ? 50 : v >= 200 ? 10 : v >= 50 ? 5 : 1;
   v = Math.round(v / step) * step;
   return Math.min(p.max, Math.max(p.min, v));
 }
@@ -71,8 +76,16 @@ function setEdit(key, value, fromSlider) {
     const f = fieldOf(key);
     f.querySelector('input[type=number]').value = value;
     if (!fromSlider) f.querySelector('input[type=range]').value = valueToPos(key, value);
+    if (key === 'AUTO') $('#autoHuman').textContent = minutesHuman(value);
   }
   refreshChanged();
+}
+
+// 150 -> «через 2 год 30 хв»;  0 -> «вимкнено»
+function minutesHuman(m) {
+  if (!m) return 'вимкнено';
+  const h = Math.floor(m / 60), mm = m % 60;
+  return 'через ' + (h ? h + ' год' : '') + (h && mm ? ' ' : '') + (mm ? mm + ' хв' : '') + ' роботи';
 }
 
 function changedKeys() {
@@ -145,6 +158,7 @@ function setConnState(state, name) {
   el.connectAll.hidden = on;
   el.hint.hidden = on;
   setControlsEnabled(on && !busy);
+  if (!on) $('#live').hidden = true;
   if (state === 'disconnected') {
     if (waiter) { waiter.reject(new Error('з\'єднання розірвано')); waiter = null; }
     log('з\'єднання закрито', 'sys');
@@ -153,7 +167,7 @@ function setConnState(state, name) {
 
 function setControlsEnabled(on) {
   el.settings.classList.toggle('disabled', !on);
-  [el.save, el.get, el.def, el.run].forEach(b => { b.disabled = !on; });
+  [el.save, el.get, el.def, el.run, $('#btnApply')].forEach(b => { b.disabled = !on; });
   el.rawForm.querySelector('button').disabled = !BleLink.connected;
 }
 
@@ -162,17 +176,20 @@ function setControlsEnabled(on) {
 // =====================================================================
 function parseKv(line) {
   const s = line.startsWith('OK ') ? line.slice(3) : line;
-  const m = /^(MODE|TAP|MAG|RED|TIM|SAVED)=(\S+)$/.exec(s);
+  const m = /^(MODE|TAP|MAG|RED|TIM|AUTO|SAVED|BAT|TEMP)=(\S+)$/.exec(s);
   if (!m) return null;
   return { key: m[1], value: m[1] === 'MODE' || m[1] === 'SAVED' ? m[2] : parseInt(m[2], 10) };
 }
 
 BleLink.onLine = line => {
   if (line.startsWith('AT+')) { log(line, 'svc'); return; }   // службова перевірка плати
-  log(line);
+  const live = /^L([AM])=(\d+),([01])$/.exec(line);          // датчики наживо
+  if (live) { log(line, 'svc'); showLive(live[1], +live[2], live[3] === '1'); return; }
+  log(line, /^(BAT|TEMP)=/.test(line) ? 'svc' : '');
 
   const kv = parseKv(line);
-  if (kv) {
+  if (kv && (kv.key === 'BAT' || kv.key === 'TEMP')) { showSys(kv.key, kv.value); }
+  else if (kv) {
     if (kv.key === 'SAVED') boardSaved = kv.value === 'YES';
     else {
       board[kv.key] = kv.value;
@@ -189,6 +206,69 @@ BleLink.onLine = line => {
 };
 
 BleLink.onState = (state, name) => setConnState(state, name);
+
+// =====================================================================
+// Датчики наживо: шкала 0..2×поріг, поріг посередині
+// =====================================================================
+const LIVE = {
+  A: { el: $('#mAcc'), key: 'TAP', unit: 'мг',  sens: 'ACC', last: 0, hitUntil: 0 },
+  M: { el: $('#mMag'), key: 'MAG', unit: 'мГс', sens: 'MAG', last: 0, hitUntil: 0 },
+};
+function showLive(which, value, trig) {
+  const m = LIVE[which], ths = board[m.key];
+  const now = Date.now();
+  m.last = now;
+  if (trig) m.hitUntil = now + 1500;                       // «спрацювало б» тримаємо 1.5 с, щоб встигнути побачити
+  $('#live').hidden = false;
+  m.el.querySelector('.meter-val').textContent = `${value} ${m.unit}`;
+  if (ths) {
+    m.el.querySelector('.fill').style.width = Math.min(100, 50 * value / ths) + '%';
+    m.el.querySelector('.meter-ths').textContent = `поріг ${ths} ${m.unit}`;
+  }
+  m.el.classList.toggle('over', !!ths && value >= ths);
+  updateLiveFlags();
+}
+function updateLiveFlags() {
+  const now = Date.now();
+  Object.values(LIVE).forEach(m => {
+    const hit = now < m.hitUntil, stale = now - m.last > 2000;
+    m.el.classList.toggle('hit', hit);
+    m.el.classList.toggle('stale', stale);
+    m.el.classList.toggle('off', !!board.MODE && board.MODE !== 'BOTH' && board.MODE !== m.sens);
+    m.el.querySelector('.trig').textContent = hit ? 'СПРАЦЮВАЛО Б' : stale ? 'немає даних' : 'нижче порога';
+  });
+}
+setInterval(updateLiveFlags, 250);
+
+// =====================================================================
+// Батарея і температура
+// =====================================================================
+// Рівні для CR123A (орієнтовно, напруга під навантаженням BLE)
+const BAT_LEVELS = [
+  { min: 2900, cls: 'lvl-ok',  text: 'добре',     fill: 100 },
+  { min: 2700, cls: 'lvl-mid', text: 'нормально', fill: 65  },
+  { min: 2500, cls: 'lvl-low', text: 'низький',   fill: 35  },
+  { min: 0,    cls: 'lvl-bad', text: 'замінити',  fill: 12  },
+];
+function showSys(key, value) {
+  if (isNaN(value)) return;
+  $('#sysInfo').hidden = false;
+  if (key === 'BAT') {
+    const l = BAT_LEVELS.find(x => value >= x.min);
+    $('#batText').textContent = (value / 1000).toFixed(2) + ' В';
+    $('#batLvl').textContent = 'батарея · ' + l.text;
+    $('#batChip').className = 'chip ' + l.cls;
+    $('#batFill').style.width = `calc(${l.fill}% - 2px)`;
+  } else {
+    $('#tempText').textContent = value + ' °C';
+  }
+}
+function refreshSys() {
+  if (!BleLink.connected) return;
+  return withBusy(async () => { await command('STAT', l => l.startsWith('TEMP=') || l.startsWith('ERR')); });
+}
+$('#batChip').addEventListener('click', refreshSys);
+$('#tempChip').addEventListener('click', refreshSys);
 
 // =====================================================================
 // Команди: по одній, кожна чекає свою відповідь
@@ -231,7 +311,9 @@ function refresh() {
 
 // Надіслати змінені значення на плату (без збереження)
 async function sendChanges() {
-  for (const k of changedKeys()) {
+  const keys = changedKeys();
+  if (keys.length) boardSaved = false;                      // на платі тепер незбережені значення
+  for (const k of keys) {
     const reply = await command(`${k} ${edit[k]}`, okOrErr);
     if (reply.startsWith('ERR')) throw new Error(`${k}: плата відповіла ${reply}`);
   }
@@ -258,6 +340,13 @@ async function doConnect(showAll) {
 }
 
 el.get.addEventListener('click', () => refresh());
+
+$('#btnApply').addEventListener('click', () => withBusy(async () => {
+  if (!changedKeys().length) { toast('Немає змін: пороги на платі такі самі, як на повзунках.', 'info', 3000); return; }
+  await sendChanges();
+  refreshChanged();
+  toast('Нові значення діють на платі (ще не збережені). Перевірте датчики наживо.', 'ok', 4000);
+}));
 
 el.save.addEventListener('click', () => withBusy(async () => {
   await sendChanges();

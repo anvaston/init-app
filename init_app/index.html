@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f7a4d">
+  <title>init_stm</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Застосунок лише вертикальний: при горизонтальному телефоні просимо повернути -->
+  <div id="rotate" class="rotate">Поверніть телефон вертикально</div>
+
+  <main class="app">
+    <!-- ===== Шапка: назва і з'єднання ===== -->
+    <header class="top">
+      <div class="title">
+        <h1>init_stm</h1>
+        <span id="status" class="pill off">Не підключено</span>
+      </div>
+      <button id="btnConnect" class="btn primary wide">Підключити</button>
+      <button id="btnConnectAll" class="link">Плату не видно? Показати всі пристрої</button>
+      <p id="hint" class="hint">Увімкніть плату з <b>натиснутим</b> важелем — на підключення є 15 с.</p>
+      <p id="noBle" class="warn" hidden>
+        Bluetooth тут недоступний. Відкрийте сторінку в Chrome або Edge через
+        Live Server (адреса має бути http://127.0.0.1… або https://…).
+      </p>
+    </header>
+
+    <!-- ===== Повідомлення ===== -->
+    <div id="toast" class="toast" hidden></div>
+
+    <!-- ===== Налаштування ===== -->
+    <section class="card" id="settings">
+      <div class="card-head">
+        <h2>Налаштування</h2>
+        <span id="savedFlag" class="tag"></span>
+      </div>
+
+      <label class="field-label">Датчики</label>
+      <div class="seg" id="mode">
+        <button data-mode="ACC">Удар</button>
+        <button data-mode="MAG">Магніт</button>
+        <button data-mode="BOTH">Обидва</button>
+      </div>
+
+      <div class="field" data-key="TAP">
+        <div class="field-row">
+          <label>Поріг удару</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>мг</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+        <div class="range-hint"><span>чутливо</span><span>грубо</span></div>
+      </div>
+
+      <div class="field" data-key="MAG">
+        <div class="field-row">
+          <label>Поріг магніту</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>мГс</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+        <div class="range-hint"><span>чутливо</span><span>грубо</span></div>
+      </div>
+
+      <div class="field" data-key="RED">
+        <div class="field-row">
+          <label>Час спрацювання</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>мс</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+      </div>
+
+      <div class="field" data-key="TIM">
+        <div class="field-row">
+          <label>Таймер перед роботою</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>с</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+      </div>
+
+      <button id="btnSave" class="btn primary wide">Зберегти і запустити</button>
+      <p class="note">Після збереження плата переходить у роботу і відключається.</p>
+      <div class="row">
+        <button id="btnGet" class="btn">Оновити</button>
+        <button id="btnDefault" class="btn">Заводські</button>
+        <button id="btnRun" class="btn danger">Вийти без збереження</button>
+      </div>
+    </section>
+
+    <!-- ===== Журнал і ручні команди ===== -->
+    <section class="card">
+      <details id="logBox">
+        <summary>Журнал обміну</summary>
+        <div class="log-tools">
+          <label><input type="checkbox" id="showService"> службові (AT+VER)</label>
+          <button id="btnClear" class="link">очистити</button>
+        </div>
+        <div id="log" class="log"></div>
+        <form id="rawForm" class="raw">
+          <input id="rawInput" type="text" placeholder="команда, напр. HELP" autocomplete="off" autocapitalize="characters">
+          <button class="btn" type="submit">Надіслати</button>
+        </form>
+      </details>
+    </section>
+
+    <footer class="foot">init_stm · пульт v0.1</footer>
+  </main>
+
+  <script src="ble.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

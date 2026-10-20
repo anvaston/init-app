@@ -58,6 +58,26 @@ h2 { font-size: 18px; margin: 0; }
 .note { text-align: center; margin: 6px 0 12px; }
 .warn { background: var(--warn-bg); border-radius: 10px; padding: 10px 12px; font-size: 14px; }
 
+/* ---- батарея і температура ---- */
+.sys { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.chip {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid var(--line); background: var(--card); color: var(--text);
+  border-radius: 12px; padding: 10px 8px; font: inherit; font-size: 15px; cursor: pointer; min-height: 44px;
+}
+.chip-txt { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.chip-txt b { font-size: 17px; }
+.chip-txt small { font-size: 12px; opacity: .8; }
+.bat { position: relative; width: 26px; height: 13px; border: 2px solid currentColor; border-radius: 3px; flex: none; }
+.bat::after { content: ""; position: absolute; right: -5px; top: 2px; width: 3px; height: 5px; background: currentColor; border-radius: 0 2px 2px 0; }
+.bat i { position: absolute; left: 1px; top: 1px; bottom: 1px; width: 0; border-radius: 1px; background: var(--accent); }
+.chip.lvl-ok  { color: var(--accent); }
+.chip.lvl-mid { color: var(--text); }
+.chip.lvl-low { color: #c77700; }
+.chip.lvl-bad { color: var(--danger); }
+.chip.lvl-low .bat i { background: #c77700; }
+.chip.lvl-bad .bat i { background: var(--danger); }
+
 /* ---- кнопки ---- */
 .btn {
   border: 1px solid var(--line);
@@ -119,6 +139,23 @@ h2 { font-size: 18px; margin: 0; }
 .val small { color: var(--muted); }
 input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: var(--accent); height: 28px; }
 .range-hint { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+/* ---- датчики наживо ---- */
+.meter { margin-bottom: 16px; }
+.meter-top, .meter-bot { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.meter-name { font-weight: 600; }
+.meter-val { font-weight: 700; font-variant-numeric: tabular-nums; }
+.off-note { display: none; color: var(--muted); font-weight: 400; }
+.meter.off .off-note { display: inline; }
+.meter.off .meter-val, .meter.off .bar { opacity: .5; }
+.bar { position: relative; height: 12px; margin: 6px 0 4px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.bar .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); transition: width .2s; }
+.bar .ths { position: absolute; left: 50%; top: -1px; bottom: -1px; width: 2px; background: var(--text); opacity: .6; }
+.meter.over .bar .fill { background: #c77700; }
+.meter-bot { font-size: 13px; color: var(--muted); }
+.trig { padding: 1px 8px; border-radius: 6px; }
+.meter.hit .trig { background: var(--danger); color: #fff; font-weight: 700; }
+.meter.stale .meter-val { color: var(--muted); }
 
 /* ---- повідомлення ---- */
 .toast { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 14px; }

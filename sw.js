@@ -3,7 +3,7 @@
  * Спочатку пробуємо взяти файл з мережі (щоб оновлення одразу підхоплювались),
  * а якщо мережі немає — беремо збережену копію. Після першого відкриття пульт працює офлайн.
  */
-const CACHE = 'init-stm-v1';
+const CACHE = 'init-stm-v5';
 const FILES = [
   './', './index.html', './style.css', './app.js', './ble.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png',
