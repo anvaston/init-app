@@ -131,7 +131,7 @@ h2 { font-size: 18px; margin: 0; }
 .field-row label { font-weight: 600; }
 .val { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
 .val input {
-  width: 84px; text-align: right; font: inherit; font-weight: 600;
+  width: 96px; text-align: right; font: inherit; font-weight: 600;
   padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
   background: var(--bg); color: var(--text);
 }
@@ -156,6 +156,18 @@ input[type=range] { width: 100%; margin: 10px 0 2px; accent-color: var(--accent)
 .trig { padding: 1px 8px; border-radius: 6px; }
 .meter.hit .trig { background: var(--danger); color: #fff; font-weight: 700; }
 .meter.stale .meter-val { color: var(--muted); }
+
+/* ---- осі датчиків ---- */
+.axes table { width: 100%; border-collapse: collapse; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.axes th, .axes td { padding: 6px 4px; text-align: right; border-bottom: 1px solid var(--line); }
+.axes thead th { font-size: 13px; font-weight: 600; color: var(--muted); vertical-align: bottom; }
+.axes thead small { font-weight: 400; font-size: 11px; }
+.axes tbody th { text-align: left; color: var(--muted); width: 28px; }
+.axes td { font-size: 17px; font-weight: 700; }
+#btnRaw { margin-bottom: 10px; }
+#btnRaw.active { background: var(--ok-bg); border-color: var(--accent); color: var(--accent); }
+.seg2 { grid-template-columns: 1fr 1fr; }
+.field.muted { opacity: .45; }
 
 /* ---- повідомлення ---- */
 .toast { margin-top: 12px; border-radius: 10px; padding: 10px 12px; font-size: 14px; }

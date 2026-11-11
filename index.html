@@ -26,7 +26,7 @@
       </div>
       <button id="btnConnect" class="btn primary wide">Підключити</button>
       <button id="btnConnectAll" class="link">Плату не видно? Показати всі пристрої</button>
-      <p id="hint" class="hint">Увімкніть плату з <b>натиснутим</b> важелем — на підключення є 15 с.</p>
+      <p id="hint" class="hint">Увімкніть плату з <b>натиснутим</b> важелем — на підключення є <span id="pairHint">10</span> с.</p>
       <p id="noBle" class="warn" hidden>
         Bluetooth тут недоступний. Відкрийте сторінку в Chrome або Edge через
         Live Server (адреса має бути http://127.0.0.1… або https://…).
@@ -51,6 +51,18 @@
         <div class="meter-top"><span class="meter-name">Магніт<small class="off-note"> · у роботі вимкнено</small></span><span class="meter-val">—</span></div>
         <div class="bar"><i class="fill"></i><b class="ths"></b></div>
         <div class="meter-bot"><span class="meter-ths">поріг —</span><span class="trig">чекаю даних</span></div>
+      </div>
+      <button id="btnRaw" class="btn wide">Показати осі</button>
+      <div id="axes" class="axes" hidden>
+        <table>
+          <thead><tr><th></th><th>Удар, Δ мг<br><small>найбільша зміна</small></th><th>Магніт, Δ мГс<br><small>середнє від «фону»</small></th></tr></thead>
+          <tbody>
+            <tr><th>X</th><td id="ax">—</td><td id="mx">—</td></tr>
+            <tr><th>Y</th><td id="ay">—</td><td id="my">—</td></tr>
+            <tr><th>Z</th><td id="az">—</td><td id="mz">—</td></tr>
+          </tbody>
+        </table>
+        <p class="note">Значення відносно нуля (спокою), за останні 0.5 с.</p>
       </div>
       <button id="btnApply" class="btn wide">Перевірити пороги без збереження</button>
       <p class="note">Поріг посередині шкали. «Спрацювало б» — у робочому режимі тут загорівся б червоний.</p>
@@ -96,6 +108,15 @@
         <input type="range" min="0" max="1000">
       </div>
 
+      <div class="field" data-key="DLY">
+        <div class="field-row">
+          <label>Затримка ГАВ</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>мс</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+        <div class="range-hint"><span>лише удар і магніт</span><span>на J3 і AUTO не діє</span></div>
+      </div>
+
       <div class="field" data-key="TIM">
         <div class="field-row">
           <label>Таймер перед роботою</label>
@@ -104,13 +125,28 @@
         <input type="range" min="0" max="1000">
       </div>
 
+      <label class="field-label">Самозбудження</label>
+      <div class="seg seg2" id="autoen">
+        <button data-v="1">Увімкнено</button>
+        <button data-v="0">Вимкнено</button>
+      </div>
+
       <div class="field" data-key="AUTO">
         <div class="field-row">
-          <label>Самозбудження</label>
+          <label>Самозбудження через</label>
           <span class="val"><input type="number" inputmode="numeric"> <small>хв</small></span>
         </div>
         <input type="range" min="0" max="1000">
         <div class="range-hint"><span id="autoHuman">вимкнено</span><span>макс. 24 год</span></div>
+      </div>
+
+      <div class="field" data-key="PAIR">
+        <div class="field-row">
+          <label>Очікування підключення</label>
+          <span class="val"><input type="number" inputmode="numeric"> <small>с</small></span>
+        </div>
+        <input type="range" min="0" max="1000">
+        <div class="range-hint"><span>діє з наступного ввімкнення</span><span>10–120 с</span></div>
       </div>
 
       <button id="btnSave" class="btn primary wide">Зберегти і запустити</button>
@@ -138,7 +174,7 @@
       </details>
     </section>
 
-    <footer class="foot">init_stm · пульт v0.5</footer>
+    <footer class="foot">init_stm · пульт v0.6</footer>
   </main>
 
   <script src="ble.js"></script>

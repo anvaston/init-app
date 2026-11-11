@@ -3,24 +3,30 @@
  * Bluetooth — в ble.js (BleLink), тут від нього потрібні лише connect / send / onLine.
  *
  * Протокол плати (режим налаштування):
- *   GET          -> MODE=BOTH, TAP=1500, MAG=30, RED=1000, TIM=20, SAVED=YES|NO
+ *   GET          -> MODE, TAP, MAG, RED, TIM, AUTO, DLY, AUTOEN, PAIR, BAT, TEMP, SAVED=YES|NO
  *   MODE x       -> OK MODE=x      (ACC | MAG | BOTH)
- *   TAP/MAG/RED/TIM n -> OK TAP=n  або  ERR мін-макс
+ *   TAP/MAG/RED/TIM/AUTO/DLY/AUTOEN/PAIR n -> OK TAP=n  або  ERR мін-макс
+ *   RAW 1|0      -> OK RAW=1|0     (осі датчиків кожні 0.5 с: A x,y,z і M ±x±y±z)
+ *   PING         -> PONG           (скидає 2-хвилинний тайм-аут)
  *   SAVE         -> OK SAVED, OK RUN  (далі плата йде в роботу і вимикає BLE)
  *   RUN          -> OK RUN, NOT SAVED (вихід без збереження)
  *   DEFAULT      -> OK DEFAULT
- *   Сама плата пише: INIT_STM READY, TIMEOUT, NOT SAVED, LEVER UP, NOT SAVED, AT+VER (службове)
+ *   Сама плата пише: INIT_STM READY, TIMEOUT, NOT SAVED, LEVER UP, NOT SAVED, AT+VER (службове),
+ *   LA=пік,0/1 і LM=пік,0/1 кожні 0.5 с, BAT= і TEMP= кожні 5 с
  */
 
 // ---------- межі параметрів (як у прошивці) ----------
 const PARAMS = {
-  TAP: { min: 50,  max: 20000, log: true  },
-  MAG: { min: 5,   max: 2000,  log: true  },
-  RED: { min: 100, max: 10000, log: true  },
-  TIM: { min: 0,   max: 300,   log: false },
-  AUTO: { min: 0,  max: 1440,  log0: true },   // хвилини, 0 = вимкнено
+  TAP:  { min: 50,  max: 15000, log: true  },   // мг
+  MAG:  { min: 10,  max: 40000, log: true  },   // мГс
+  RED:  { min: 100, max: 10000, log: true  },   // мс
+  DLY:  { min: 0,   max: 10000, log0: true },   // мс, 0 = одразу
+  TIM:  { min: 0,   max: 300,   log: false },   // с
+  AUTO: { min: 0,   max: 1440,  log0: true },   // хвилини, 0 = вимкнено
+  PAIR: { min: 10,  max: 120,   log: false },   // с
 };
-const KEYS = ['MODE', 'TAP', 'MAG', 'RED', 'TIM', 'AUTO'];
+const KEYS = ['MODE', 'TAP', 'MAG', 'RED', 'DLY', 'TIM', 'AUTOEN', 'AUTO', 'PAIR'];
+const PING_MS = 60000;     // поки показуємо осі: «я тут» раз на хвилину
 const REPLY_TIMEOUT_MS = 2500;
 
 // ---------- стан ----------
@@ -61,6 +67,7 @@ function valueToPos(key, v) {
 }
 function niceRound(v, p, key) {
   const step = key === 'AUTO' ? (v >= 240 ? 15 : v >= 60 ? 5 : 1)
+             : key === 'PAIR' || key === 'TIM' ? 1
              : v >= 5000 ? 100 : v >= 1000 ? 50 : v >= 200 ? 10 : v >= 50 ? 5 : 1;
   v = Math.round(v / step) * step;
   return Math.min(p.max, Math.max(p.min, v));
@@ -72,6 +79,9 @@ function setEdit(key, value, fromSlider) {
   edit[key] = value;
   if (key === 'MODE') {
     el.mode.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.mode === value));
+  } else if (key === 'AUTOEN') {
+    $('#autoen').querySelectorAll('button').forEach(b => b.classList.toggle('active', +b.dataset.v === +value));
+    fieldOf('AUTO').classList.toggle('muted', +value === 0);
   } else {
     const f = fieldOf(key);
     f.querySelector('input[type=number]').value = value;
@@ -117,6 +127,7 @@ Object.keys(PARAMS).forEach(key => {
   });
 });
 el.mode.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setEdit('MODE', b.dataset.mode)));
+$('#autoen').querySelectorAll('button').forEach(b => b.addEventListener('click', () => setEdit('AUTOEN', +b.dataset.v)));
 
 // =====================================================================
 // Журнал і повідомлення
@@ -158,7 +169,7 @@ function setConnState(state, name) {
   el.connectAll.hidden = on;
   el.hint.hidden = on;
   setControlsEnabled(on && !busy);
-  if (!on) $('#live').hidden = true;
+  if (!on) { $('#live').hidden = true; setRaw(false); }
   if (state === 'disconnected') {
     if (waiter) { waiter.reject(new Error('з\'єднання розірвано')); waiter = null; }
     log('з\'єднання закрито', 'sys');
@@ -168,6 +179,7 @@ function setConnState(state, name) {
 function setControlsEnabled(on) {
   el.settings.classList.toggle('disabled', !on);
   [el.save, el.get, el.def, el.run, $('#btnApply')].forEach(b => { b.disabled = !on; });
+  $('#btnRaw').disabled = !BleLink.connected;
   el.rawForm.querySelector('button').disabled = !BleLink.connected;
 }
 
@@ -176,7 +188,7 @@ function setControlsEnabled(on) {
 // =====================================================================
 function parseKv(line) {
   const s = line.startsWith('OK ') ? line.slice(3) : line;
-  const m = /^(MODE|TAP|MAG|RED|TIM|AUTO|SAVED|BAT|TEMP)=(\S+)$/.exec(s);
+  const m = /^(MODE|TAP|MAG|RED|TIM|AUTOEN|AUTO|DLY|PAIR|RAW|SAVED|BAT|TEMP)=(\S+)$/.exec(s);
   if (!m) return null;
   return { key: m[1], value: m[1] === 'MODE' || m[1] === 'SAVED' ? m[2] : parseInt(m[2], 10) };
 }
@@ -185,11 +197,18 @@ BleLink.onLine = line => {
   if (line.startsWith('AT+')) { log(line, 'svc'); return; }   // службова перевірка плати
   const live = /^L([AM])=(\d+),([01])$/.exec(line);          // датчики наживо
   if (live) { log(line, 'svc'); showLive(live[1], +live[2], live[3] === '1'); return; }
+  const ax = /^A(\d+),(\d+),(\d+)$/.exec(line);              // осі удару (RAW 1)
+  if (ax) { log(line, 'svc'); showAxes('a', ax.slice(1).map(Number)); return; }
+  const mx = /^M([+-]\d+)([+-]\d+)([+-]\d+)$/.exec(line);   // осі магніту (RAW 1)
+  if (mx) { log(line, 'svc'); showAxes('m', mx.slice(1).map(Number)); return; }
+  if (line === 'PONG') { log(line, 'svc'); if (waiter && waiter.match(line)) { waiter.resolve(line); waiter = null; } return; }
   log(line, /^(BAT|TEMP)=/.test(line) ? 'svc' : '');
 
   const kv = parseKv(line);
   if (kv && (kv.key === 'BAT' || kv.key === 'TEMP')) { showSys(kv.key, kv.value); }
+  else if (kv && kv.key === 'RAW') { setRaw(kv.value === 1); }
   else if (kv) {
+    if (kv.key === 'PAIR') rememberPair(kv.value);
     if (kv.key === 'SAVED') boardSaved = kv.value === 'YES';
     else {
       board[kv.key] = kv.value;
@@ -239,6 +258,40 @@ function updateLiveFlags() {
   });
 }
 setInterval(updateLiveFlags, 250);
+
+// =====================================================================
+// Осі датчиків (RAW): відносно нуля, раз на 0.5 с
+// =====================================================================
+let rawOn = false, pingTimer = null;
+function showAxes(kind, v) {
+  const fmt = kind === 'm' ? (n => (n > 0 ? '+' : '') + n) : (n => String(n));
+  ['x', 'y', 'z'].forEach((a, i) => { $('#' + kind + a).textContent = fmt(v[i]); });
+}
+function setRaw(on) {
+  rawOn = on;
+  $('#axes').hidden = !on;
+  $('#btnRaw').textContent = on ? 'Сховати осі' : 'Показати осі';
+  $('#btnRaw').classList.toggle('active', on);
+  clearInterval(pingTimer);
+  pingTimer = null;
+  if (on) pingTimer = setInterval(() => {                    // «я тут», щоб плата не вийшла через 2 хв
+    if (BleLink.connected && rawOn) command('PING', l => l === 'PONG').catch(() => {});
+  }, PING_MS);
+}
+$('#btnRaw').addEventListener('click', () => {
+  if (!BleLink.connected) return;
+  const want = !rawOn;
+  command('RAW ' + (want ? 1 : 0), okOrErr)
+    .then(r => { if (r.startsWith('ERR')) toast('Плата не підтримує RAW — онови прошивку', 'err'); })
+    .catch(e => toast('Помилка: ' + e.message, 'err'));
+});
+
+// Останнє відоме PAIR — для підказки «на підключення є N с» ще до підключення
+function rememberPair(v) {
+  $('#pairHint').textContent = v;
+  try { localStorage.setItem('init_pair_s', String(v)); } catch (e) { /* немає сховища — не страшно */ }
+}
+try { const p = localStorage.getItem('init_pair_s'); if (p) $('#pairHint').textContent = p; } catch (e) { /* */ }
 
 // =====================================================================
 // Батарея і температура

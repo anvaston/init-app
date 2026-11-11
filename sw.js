@@ -3,7 +3,7 @@
  * Спочатку пробуємо взяти файл з мережі (щоб оновлення одразу підхоплювались),
  * а якщо мережі немає — беремо збережену копію. Після першого відкриття пульт працює офлайн.
  */
-const CACHE = 'init-stm-v5';
+const CACHE = 'init-stm-v7';
 const FILES = [
   './', './index.html', './style.css', './app.js', './ble.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png',
@@ -24,7 +24,7 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })      // завжди перевіряти свіжу версію на сервері
       .then(resp => {
         const copy = resp.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
